@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.io.*;
 import java.util.*;
+import java.time.*;
 
 public class EventManager {
 
@@ -130,5 +131,26 @@ public void restoreEvents(String backupPath) {
         System.out.println("Restore failed: " + e.getMessage());
     }
 }
+public void addRecurringEvent(
+        String title,
+        LocalDateTime start,
+        Duration duration,
+        int intervalDays,
+        int count
+) {
+    int series = nextEventId;
+
+    for (int i = 0; i < count; i++) {
+        Event e = new Event(
+                nextEventId++,
+                title,
+                start.plusDays((long) i * intervalDays),
+                start.plusDays((long) i * intervalDays).plus(duration)
+        );
+        e.setSeriesId(series);
+        events.add(e);
+    }
+}
+
 
 }
