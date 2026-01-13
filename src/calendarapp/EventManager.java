@@ -92,6 +92,10 @@ public class EventManager {
     public List<Event> getEvents() {
         return events;
     }
+    public void addEvent(Event e) {
+    events.add(e);
+}
+
     
     public void backupEvents(String backupPath) {
     try (PrintWriter writer = new PrintWriter(new FileWriter(backupPath))) {
@@ -141,16 +145,80 @@ public void addRecurringEvent(
     int series = nextEventId;
 
     for (int i = 0; i < count; i++) {
-        Event e = new Event(
-                nextEventId++,
-                title,
-                start.plusDays((long) i * intervalDays),
-                start.plusDays((long) i * intervalDays).plus(duration)
-        );
+       Event e = new Event(
+    nextEventId++, 
+    title, 
+    "", // description placeholder
+    start.plusDays((long) i * intervalDays),
+    start.plusDays((long) i * intervalDays).plus(duration)
+);
+
         e.setSeriesId(series);
         events.add(e);
     }
 }
+// Search events on a single date
+public java.util.List<Event> searchByDate(LocalDate date) {
+    java.util.List<Event> results = new java.util.ArrayList<>();
+    for (Event e : events) {
+        if (e.getStart().toLocalDate().equals(date)) {
+            results.add(e);
+        }
+    }
+    return results;
+}
+
+// Search events within a date range
+public java.util.List<Event> searchByDateRange(LocalDate start, LocalDate end) {
+    java.util.List<Event> results = new java.util.ArrayList<>();
+    for (Event e : events) {
+        LocalDate eventDate = e.getStart().toLocalDate();
+        if (!eventDate.isBefore(start) && !eventDate.isAfter(end)) {
+            results.add(e);
+        }
+    }
+    return results;
+}
+public void addRecurringEvent(Event baseEvent) {
+    events.add(baseEvent);
+
+    if (!baseEvent.isRecurring()) return;
+
+   LocalDateTime date = baseEvent.getStartDateTime();
+
+
+    for (int i = 1; i < baseEvent.getRecurrenceCount(); i++) {
+        switch (baseEvent.getRecurrenceType()) {
+            case "DAILY":
+                date = date.plusDays(1);
+                break;
+            case "WEEKLY":
+                date = date.plusWeeks(1);
+                break;
+            case "MONTHLY":
+                date = date.plusMonths(1);
+                break;
+        }
+
+        Event copy = new Event(
+                baseEvent.getTitle(),
+                baseEvent.getDescription(),
+                date
+        );
+
+        events.add(copy);
+    }
+}
+public int getNextEventId() {
+    int maxId = 0;
+    for (Event e : events) { // assuming your list is called 'events'
+        if (e.getEventId() > maxId) {
+            maxId = e.getEventId();
+        }
+    }
+    return maxId + 1;
+}
+
 
 
 }
