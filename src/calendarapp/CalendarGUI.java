@@ -13,6 +13,7 @@ public class CalendarGUI extends JFrame {
     private YearMonth currentMonth;
     private EventManager manager; // link to EventManager
 
+
     // Constructor
     public CalendarGUI(EventManager manager) {
         this.manager = manager; // connect EventManager
@@ -33,6 +34,10 @@ public class CalendarGUI extends JFrame {
         topPanel.add(monthLabel);
         topPanel.add(nextBtn);
 
+        JButton searchBtn = new JButton("Search");
+topPanel.add(searchBtn);
+
+searchBtn.addActionListener(e -> searchDialog());
         add(topPanel, BorderLayout.NORTH);
 
         // Calendar panel for days
@@ -115,7 +120,83 @@ public class CalendarGUI extends JFrame {
 
         calendarPanel.revalidate();
         calendarPanel.repaint();
+    
+    } 
+    
+    private void searchDialog() {
+    // Basic search fields
+    JTextField startDateField = new JTextField("yyyy-mm-dd");
+    JTextField endDateField = new JTextField("yyyy-mm-dd (optional)");
+
+    // Advanced search fields
+    JTextField titleField = new JTextField("Leave blank if not filtering");
+    JCheckBox recurringBox = new JCheckBox("Recurring only");
+
+    Object[] message = {
+            "Start Date:", startDateField,
+            "End Date (optional):", endDateField,
+            "Title contains (optional):", titleField,
+            recurringBox
+    };
+
+    int option = JOptionPane.showConfirmDialog(
+            this,
+            message,
+            "Search Events",
+            JOptionPane.OK_CANCEL_OPTION
+    );
+
+    if (option == JOptionPane.OK_OPTION) {
+        try {
+            LocalDate startDate = LocalDate.parse(startDateField.getText());
+            LocalDate endDate;
+            if (endDateField.getText().isBlank() || endDateField.getText().equals("yyyy-mm-dd (optional)")) {
+                endDate = startDate; // single date search
+            } else {
+                endDate = LocalDate.parse(endDateField.getText());
+            }
+
+            java.util.List<Event> results = manager.searchByDateRange(startDate, endDate);
+
+            // Filter by title keyword
+            String keyword = titleField.getText().trim().toLowerCase();
+            if (!keyword.isBlank()) {
+                results.removeIf(e -> !e.getTitle().toLowerCase().contains(keyword));
+            }
+
+            // Filter by recurring
+            if (recurringBox.isSelected()) {
+                results.removeIf(e -> !e.isRecurring());
+            }
+
+            if (results.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "No events found.");
+                return;
+            }
+
+            // Display results
+            StringBuilder sb = new StringBuilder("Events found:\n\n");
+            for (Event e : results) {
+                sb.append(e.getEventId())
+                  .append(": ")
+                  .append(e.getTitle())
+                  .append(" | ")
+                  .append(e.getStart())
+                  .append(e.isRecurring() ? " (Recurring)" : "")
+                  .append("\n");
+            }
+
+            JOptionPane.showMessageDialog(this, sb.toString(), "Search Results",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Invalid date format.");
+        }
     }
+}
+
+
+
 
     // Popup to update an existing event
     private void updateEventDialog(Event event) {
@@ -152,38 +233,78 @@ public class CalendarGUI extends JFrame {
 
     // Popup to add a new event
     private void addEventDialog(LocalDate date) {
-        JTextField titleField = new JTextField();
-        JTextField descField = new JTextField();
-        JTextField startField = new JTextField("HH:mm");
-        JTextField endField = new JTextField("HH:mm");
 
-        Object[] message = {
-                "Title:", titleField,
-                "Description:", descField,
-                "Start Time (HH:mm):", startField,
-                "End Time (HH:mm):", endField
-        };
+    JTextField titleField = new JTextField();
+    JTextField descField = new JTextField();
+    JTextField startField = new JTextField("10:00");
+    JTextField endField = new JTextField("11:00");
 
-        int option = JOptionPane.showConfirmDialog(this, message, "Add Event", JOptionPane.OK_CANCEL_OPTION);
-        if (option == JOptionPane.OK_OPTION) {
-            try {
-                LocalDateTime start = LocalDateTime.of(date.getYear(), date.getMonthValue(),
-                        date.getDayOfMonth(),
-                        Integer.parseInt(startField.getText().split(":")[0]),
-                        Integer.parseInt(startField.getText().split(":")[1]));
+    JCheckBox recurringBox = new JCheckBox("Recurring Event");
 
-                LocalDateTime end = LocalDateTime.of(date.getYear(), date.getMonthValue(),
-                        date.getDayOfMonth(),
-                        Integer.parseInt(endField.getText().split(":")[0]),
-                        Integer.parseInt(endField.getText().split(":")[1]));
+    String[] types = {"DAILY", "WEEKLY", "MONTHLY"};
+    JComboBox<String> recurrenceTypeBox = new JComboBox<>(types);
+    JTextField repeatCountField = new JTextField("3");
 
-                manager.createEvent(titleField.getText(), descField.getText(), start, end);
-                updateCalendar(); // refresh calendar with new tooltip
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Invalid input: " + ex.getMessage());
+    Object[] message = {
+            "Title:", titleField,
+            "Description:", descField,
+            "Start Time (HH:mm):", startField,
+            "End Time (HH:mm):", endField,
+            recurringBox,
+            "Recurrence Type:", recurrenceTypeBox,
+            "Repeat Count:", repeatCountField
+    };
+
+    int option = JOptionPane.showConfirmDialog(
+            this,
+            message,
+            "Add Event",
+            JOptionPane.OK_CANCEL_OPTION
+    );
+
+    if (option == JOptionPane.OK_OPTION) {
+        try {
+            LocalDateTime start = LocalDateTime.of(
+                    date.getYear(),
+                    date.getMonthValue(),
+                    date.getDayOfMonth(),
+                    Integer.parseInt(startField.getText().split(":")[0]),
+                    Integer.parseInt(startField.getText().split(":")[1])
+            );
+
+            LocalDateTime end = LocalDateTime.of(
+                    date.getYear(),
+                    date.getMonthValue(),
+                    date.getDayOfMonth(),
+                    Integer.parseInt(endField.getText().split(":")[0]),
+                    Integer.parseInt(endField.getText().split(":")[1])
+            );
+
+            Event event = new Event(
+                    manager.getNextEventId(),
+                    titleField.getText(),
+                    descField.getText(),
+                    start,
+                    end
+            );
+
+            if (recurringBox.isSelected()) {
+                event.setRecurring(true);
+                event.setRecurrenceType((String) recurrenceTypeBox.getSelectedItem());
+                event.setRecurrenceCount(Integer.parseInt(repeatCountField.getText()));
+                manager.addRecurringEvent(event);
+            } else {
+                manager.addEvent(event);
             }
+
+            updateCalendar();
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Invalid input.");
         }
     }
+}
+
 
     // Popup to manage existing events on a day
     private void manageEventsDialog(LocalDate date) {
@@ -257,6 +378,8 @@ public class CalendarGUI extends JFrame {
     new CalendarGUI(manager);
 }
     
+    
+
 
     }
 
