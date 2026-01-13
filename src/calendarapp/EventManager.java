@@ -218,7 +218,50 @@ public int getNextEventId() {
     }
     return maxId + 1;
 }
+public boolean hasConflict(LocalDateTime start, LocalDateTime end) {
+    for (Event e : events) {
+        if (start.isBefore(e.getEnd()) && end.isAfter(e.getStart())) {
+            return true;
+        }
+    }
+    return false;
+}
 
+// Total number of events
+public int getTotalEvents() {
+    return events.size();
+}
+
+// Busiest day of the week
+public String getBusiestDay() {
+    Map<java.time.DayOfWeek, Integer> countMap = new HashMap<>();
+
+    for (Event e : events) {
+        java.time.DayOfWeek day = e.getStart().getDayOfWeek();
+        countMap.put(day, countMap.getOrDefault(day, 0) + 1);
+    }
+
+    java.time.DayOfWeek busiest = null;
+    int max = 0;
+
+    for (var entry : countMap.entrySet()) {
+        if (entry.getValue() > max) {
+            max = entry.getValue();
+            busiest = entry.getKey();
+        }
+    }
+
+    return busiest == null ? "N/A" : busiest.toString();
+}
+
+// Count recurring events
+public int getRecurringEventCount() {
+    int count = 0;
+    for (Event e : events) {
+        if (e.isRecurring()) count++;
+    }
+    return count;
+}
 
 
 }
