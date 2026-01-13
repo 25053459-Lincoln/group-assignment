@@ -12,6 +12,8 @@ public class Event {
     private String recurrenceType;
     private int recurrenceCount;
     private int seriesId;
+    private int reminderMinutes; // minutes before event
+
 
     // Full constructor (for normal events)
     public Event(int eventId, String title, String description, LocalDateTime start, LocalDateTime end) {
@@ -50,6 +52,14 @@ public class Event {
     public void setSeriesId(int seriesId) { this.seriesId = seriesId; }
 
     public LocalDateTime getStartDateTime() { return start; }
+public int getReminderMinutes() {
+    return reminderMinutes;
+}
+
+public void setReminderMinutes(int reminderMinutes) {
+    this.reminderMinutes = reminderMinutes;
+}
+
 }
 
 
