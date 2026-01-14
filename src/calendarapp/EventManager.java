@@ -3,7 +3,8 @@ package calendarapp;
 import java.io.*;
 import java.time.*;
 import java.util.*;
-
+import java.util.ArrayList;
+import java.util.List;
 public class EventManager {
 
     private List<Event> events;
@@ -16,11 +17,18 @@ public class EventManager {
 
     // Create a new single event
     public void createEvent(String title, String desc, LocalDateTime start, LocalDateTime end) {
-        int id = nextEventId++;
-        Event e = new Event(id, title, desc, start, end);
-        events.add(e);
-        FileManager.saveEvent(e);
+    // Conflict check
+    if (hasConflict(start, end)) {
+        System.out.println("⚠️ Conflict detected! Event not created.");
+        return; // don't create overlapping event
     }
+
+    int id = nextEventId++;
+    Event e = new Event(id, title, desc, start, end);
+    events.add(e);
+    FileManager.saveEvent(e);
+}
+
 
     // Add a recurring event (creates all occurrences)
     public void addRecurringEvent(Event event) {
@@ -49,18 +57,24 @@ public class EventManager {
 
     // Update a single event by ID
     public void updateEvent(int id, String newTitle, String newDesc, LocalDateTime newStart, LocalDateTime newEnd) {
-        for (Event e : events) {
-            if (e.getEventId() == id) {
-                e.setTitle(newTitle);
-                e.setDescription(newDesc);
-                e.setStart(newStart);
-                e.setEnd(newEnd);
-                saveAllEvents();
-                return;
-            }
-        }
-        System.out.println("Event ID not found!");
+    if (hasConflictExcludingEvent(newStart, newEnd, id)) {
+        System.out.println("⚠️ Conflict detected! Event not updated.");
+        return;
     }
+
+    for (Event e : events) {
+        if (e.getEventId() == id) {
+            e.setTitle(newTitle);
+            e.setDescription(newDesc);
+            e.setStart(newStart);
+            e.setEnd(newEnd);
+            saveAllEvents();
+            return;
+        }
+    }
+    System.out.println("Event ID not found!");
+}
+
 
     // Update all events in a recurring series
     public void updateRecurringEvent(Event event) {
@@ -86,6 +100,42 @@ public class EventManager {
         saveAllEvents();
     }
 
+
+    // Search by event title
+    public List<Event> searchByTitle(String title) {
+        List<Event> results = new ArrayList<>();
+        for (Event e : events) {
+            if (e.getTitle().toLowerCase().contains(title.toLowerCase())) {
+                results.add(e);
+            }
+        }
+        return results;
+    }
+
+    // Search by additional field
+    public List<Event> searchByAdditionalField(AdditionalFieldManager extra, String query) {
+        List<Integer> eventIds = extra.searchIds(query); // returns list of matching eventIds
+        List<Event> results = new ArrayList<>();
+        for (Event e : events) {
+            if (eventIds.contains(e.getEventId())) {
+                results.add(e);
+            }
+        }
+        return results;
+    }
+
+    // Advanced search: filter by title AND additional field
+    public List<Event> advancedSearch(AdditionalFieldManager extra, String title, String additionalQuery) {
+        List<Event> titleFiltered = searchByTitle(title);
+        List<Integer> additionalIds = extra.searchIds(additionalQuery);
+        List<Event> results = new ArrayList<>();
+        for (Event e : titleFiltered) {
+            if (additionalIds.contains(e.getEventId())) {
+                results.add(e);
+            }
+        }
+        return results;
+    }
     // Delete a recurring series
     public void deleteRecurringEvent(Event event) {
         if (event.getSeriesId() != 0) {
@@ -201,5 +251,141 @@ public void viewAllEvents() {
                 " (" + e.getStart() + " to " + e.getEnd() + ")");
     }
 }
+public void viewWeeklyList(LocalDate startDate) {
+    System.out.println("=== Week of " + startDate + " ===");
+
+    for (int i = 0; i < 7; i++) {
+        LocalDate day = startDate.plusDays(i);
+        DayOfWeek dow = day.getDayOfWeek();
+        boolean found = false;
+
+        System.out.print(dow.toString().substring(0, 3) + " " +
+                String.format("%02d", day.getDayOfMonth()) + ": ");
+
+        for (Event e : events) {
+            if (e.getStart().toLocalDate().equals(day)) {
+                System.out.print(e.getTitle() +
+                        " (" + e.getStart().toLocalTime() + ")");
+                found = true;
+            }
+        }
+
+        if (!found) System.out.print("No events");
+        System.out.println();
+    }
+}
+public void viewDailyList(LocalDate date) {
+    System.out.println("=== " + date + " ===");
+    boolean found = false;
+
+    for (Event e : events) {
+        if (e.getStart().toLocalDate().equals(date)) {
+            System.out.println(
+                e.getTitle() + " (" + e.getStart().toLocalTime() + ")"
+            );
+            found = true;
+        }
+    }
+
+    if (!found) System.out.println("No events");
+}
+public void viewMonthlyList(YearMonth month) {
+    System.out.println("=== " + month + " ===");
+
+    boolean found = false;
+    for (Event e : events) {
+        if (YearMonth.from(e.getStart()).equals(month)) {
+            System.out.println(
+                e.getStart().toLocalDate() + ": " +
+                e.getTitle() + " (" + e.getStart().toLocalTime() + ")"
+            );
+            found = true;
+        }
+    }
+
+    if (!found) System.out.println("No events");
+}
+public void viewCalendarMonthCLI(YearMonth month) {
+    System.out.println(month.getMonth().toString().substring(0, 3) +
+            " " + month.getYear());
+    System.out.println("Su Mo Tu We Th Fr Sa");
+
+    LocalDate firstDay = month.atDay(1);
+    int startDay = firstDay.getDayOfWeek().getValue() % 7;
+    int daysInMonth = month.lengthOfMonth();
+
+    // spacing before first day
+    for (int i = 0; i < startDay; i++) {
+        System.out.print("   ");
+    }
+
+    for (int day = 1; day <= daysInMonth; day++) {
+        LocalDate current = month.atDay(day);
+        boolean hasEvent = false;
+
+        for (Event e : events) {
+            if (e.getStart().toLocalDate().equals(current)) {
+                hasEvent = true;
+                break;
+            }
+        }
+
+        System.out.print(day);
+        if (hasEvent) System.out.print("*");
+        else System.out.print(" ");
+
+        if ((day + startDay) % 7 == 0) System.out.println();
+        else System.out.print(" ");
+    }
+
+    System.out.println("\n");
+
+    // Event details
+    for (Event e : events) {
+        if (YearMonth.from(e.getStart()).equals(month)) {
+            System.out.println("* " +
+                e.getStart().getDayOfMonth() + ": " +
+                e.getTitle() +
+                " (" + e.getStart().toLocalTime() + ")");
+        }
+    }
+}
+    public void showLaunchReminder() {
+    LocalDateTime now = LocalDateTime.now();
+    Event nextEvent = null;
+    Duration shortest = null;
+
+    for (Event e : events) {
+        if (e.getStart().isAfter(now)) {
+            Duration untilEvent = Duration.between(now, e.getStart());
+
+            if (shortest == null || untilEvent.compareTo(shortest) < 0) {
+                shortest = untilEvent;
+                nextEvent = e;
+            }
+        }
+    }
+
+    if (nextEvent == null) {
+        System.out.println("No upcoming events.");
+        return;
+    }
+
+    long minutes = shortest.toMinutes();
+
+    System.out.println("🔔 Reminder");
+    if (minutes < 60) {
+        System.out.println("Your next event \"" + nextEvent.getTitle() +
+                "\" is coming soon in " + minutes + " minutes.");
+    } else if (minutes < 1440) {
+        System.out.println("Your next event \"" + nextEvent.getTitle() +
+                "\" is coming today.");
+    } else {
+        System.out.println("Your next event \"" + nextEvent.getTitle() +
+                "\" is coming soon.");
+    }
+}
+// Search events by title keyword (case-insensitive)
+
 
 }
