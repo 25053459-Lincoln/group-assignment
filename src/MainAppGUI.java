@@ -1,14 +1,4 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-
-package Assigment; // 保持和你队友一致的包名
-
-/**
- *
- * @author 丢丢 & You
- */
+package Assigment; 
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
