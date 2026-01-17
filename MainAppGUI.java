@@ -39,7 +39,7 @@ public class MainAppGUI extends JFrame {
         JButton deleteBtn = new JButton("Delete Event");
         JButton backupBtn = new JButton("Backup");
         JButton restoreBtn = new JButton("Restore");
-        // [Req 9] 添加统计按钮
+        // [Req 9] 添加统计按钮To add a statistics button
         JButton statsBtn = new JButton("Statistics");
 
         panel.add(addBtn);
@@ -47,7 +47,7 @@ public class MainAppGUI extends JFrame {
         panel.add(deleteBtn);
         panel.add(backupBtn);
         panel.add(restoreBtn);
-        panel.add(statsBtn); // 把按钮加进面板
+        panel.add(statsBtn); // 把按钮加进面板Add the button to the panel
         add(panel, BorderLayout.SOUTH);
 
         // Button actions
@@ -57,7 +57,7 @@ public class MainAppGUI extends JFrame {
         backupBtn.addActionListener(e -> backupEvents());
         restoreBtn.addActionListener(e -> restoreEvents());
         
-        // [Req 9] 统计按钮点击事件
+        // [Req 9] 统计按钮点击事件Statistics button click events
         statsBtn.addActionListener(e -> {
             String stats = manager.getEventStatistics(manager.getEvents());
             JOptionPane.showMessageDialog(this, stats, "Event Statistics", JOptionPane.INFORMATION_MESSAGE);
@@ -74,7 +74,7 @@ public class MainAppGUI extends JFrame {
 
         setVisible(true);
         
-        // [Req 8] 程序启动时，检查未来24小时的提醒
+        // [Req 8] 程序启动时，检查未来24小时的提醒When the program starts, check for reminders for the next 24 hours
         manager.checkUpcomingReminders(manager.getEvents());
     }
 
@@ -115,13 +115,13 @@ public class MainAppGUI extends JFrame {
                 LocalDateTime start = LocalDateTime.parse(startField.getText(), dtf);
                 LocalDateTime end = LocalDateTime.parse(endField.getText(), dtf);
 
-                // [Req 13] 在保存之前，进行冲突检测！
+                // [Req 13] Do conflict detection before saving!
                 if (!manager.isTimeSlotAvailable(start, end, manager.getEvents())) {
                     JOptionPane.showMessageDialog(this, 
                         "Conflict Detected! There is already an event during this time.", 
                         "Time Conflict", 
                         JOptionPane.ERROR_MESSAGE);
-                    return; // 阻止保存
+                    return; // Prevent saving 阻止保存
                 }
 
                 manager.createEvent(titleField.getText(), descField.getText(), start, end);
